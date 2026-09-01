@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+backend/.env
+
+# Data (regenerate with: python -m scripts.seed --reset --demo-queries)
+backend/data/chroma/
+backend/data/uploads/
+backend/data/registry.json
+backend/data/*.corrupt.json
+
+# Node
+node_modules/
+.next/
+out/
+frontend/.env.local
+*.tsbuildinfo
+next-env.d.ts
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+.smoke/

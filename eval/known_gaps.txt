@@ -1,0 +1,16 @@
+# Cases that currently fail. Format: expected_status|question
+#
+# Kept visible rather than deleted. Each one names a real weakness of a
+# retrieval-only gate; all three are answerable by the model layer once an LLM
+# key is configured, which is the second line of defence the design assumes.
+
+# Two-word fragments carrying almost no signal. "balance" and "remaining" appear
+# nowhere in the corpus, so they add IDF mass that nothing can match. These fail
+# closed - refused and logged as coverage gaps - which is the safe direction.
+answered|leaves balance
+answered|my remaining leaves
+
+# The question contains a genuinely covered topic word ("travel"), so retrieval
+# scoring alone cannot tell business travel from space travel. Same class as
+# "pet bereavement leave": only reading the excerpt settles it.
+no_coverage|what is the company policy on space travel

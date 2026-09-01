@@ -1,0 +1,18 @@
+# --- Web framework -----------------------------------------------------
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# --- Vector store ------------------------------------------------------
+chromadb==0.5.23
+
+# --- Orchestration and model providers ---------------------------------
+langchain-core==0.3.28
+langchain-text-splitters==0.3.4
+langchain-google-genai==2.0.7
+langchain-openai==0.2.14
+
+# --- Document parsing --------------------------------------------------
+pypdf==5.1.0

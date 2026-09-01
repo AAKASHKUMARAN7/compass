@@ -1,0 +1,448 @@
+================================================================================
+COMPASS - INTERNAL POLICY INTELLIGENCE
+How to run the project locally, by hand
+================================================================================
+
+This project is two separate programs that talk to each other over HTTP:
+
+    backend/    a Python API  (FastAPI)      -> http://localhost:8010
+    frontend/   a web console (Next.js)      -> http://localhost:3000
+
+They are started SEPARATELY, in TWO terminal windows, and BOTH must be running
+at the same time. The web page on port 3000 is useless on its own - it fetches
+all of its data from port 8010.
+
+Nothing here needs Claude Code, an IDE, or Docker. Just Python and Node.
+
+
+================================================================================
+0. PREREQUISITES
+================================================================================
+
+You need these installed and on your PATH:
+
+    Python 3.11 or newer
+    Node.js 18 or newer  (which includes npm)
+
+Check them:
+
+    python --version
+    node --version
+    npm --version
+
+Verified working on this machine:
+
+    Python 3.11.5
+    Node    v24.13.1
+    npm     11.8.0
+
+If "python" is not found on Windows, try "py" instead, or reinstall Python and
+tick "Add Python to PATH" during setup.
+
+
+================================================================================
+1. A NOTE ABOUT PORTS - READ THIS
+================================================================================
+
+The API runs on port 8010, NOT the usual 8000.
+
+Port 8000 on this machine is already taken by Splunk (splunkd). Rather than
+fight it, the project was configured to use 8010 throughout.
+
+If you ever want to change it, you must change it in TWO places or the frontend
+will not find the backend:
+
+    backend/.env          PORT=8010
+    frontend/.env.local   NEXT_PUBLIC_API_BASE_URL=http://localhost:8010
+
+To check whether a port is already in use on Windows:
+
+    netstat -ano | findstr :8010
+
+
+================================================================================
+2. BACKEND - FIRST TIME SETUP
+================================================================================
+
+Open a terminal (PowerShell) and go to the backend folder:
+
+    cd C:\Users\aakas\Desktop\TVM_AI_PROJECT\backend
+
+--------------------------------------------------------------------------------
+2.1  Create a virtual environment
+--------------------------------------------------------------------------------
+
+A virtual environment keeps this project's Python packages separate from the
+rest of your system.
+
+    python -m venv .venv
+
+This creates a ".venv" folder inside backend/. You only ever do this once.
+
+--------------------------------------------------------------------------------
+2.2  Activate the virtual environment
+--------------------------------------------------------------------------------
+
+Windows PowerShell:
+
+    .\.venv\Scripts\Activate.ps1
+
+Windows Command Prompt (cmd.exe):
+
+    .venv\Scripts\activate.bat
+
+Git Bash / macOS / Linux:
+
+    source .venv/bin/activate        (macOS/Linux)
+    source .venv/Scripts/activate    (Git Bash on Windows)
+
+You will know it worked because your prompt now starts with (.venv), like this:
+
+    (.venv) PS C:\Users\aakas\Desktop\TVM_AI_PROJECT\backend>
+
+IMPORTANT: you must activate the virtual environment in EVERY new terminal you
+use for the backend. It is not permanent.
+
+If PowerShell refuses with "running scripts is disabled on this system", run
+this once and then try activating again:
+
+    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+Alternative if you would rather not activate at all: prefix every command with
+the venv's python directly, which always works:
+
+    .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8010
+
+--------------------------------------------------------------------------------
+2.3  Install the Python packages
+--------------------------------------------------------------------------------
+
+    pip install -r requirements.txt
+
+This takes roughly 5-10 minutes on a first run. It installs FastAPI, ChromaDB,
+LangChain and the document parsers. Some of these are large; that is normal.
+
+--------------------------------------------------------------------------------
+2.4  Create the configuration file
+--------------------------------------------------------------------------------
+
+Windows PowerShell:
+
+    Copy-Item .env.example .env
+
+Windows Command Prompt:
+
+    copy .env.example .env
+
+macOS / Linux / Git Bash:
+
+    cp .env.example .env
+
+The application reads its settings from backend/.env. It is already filled in
+with working defaults, so you do not have to edit anything to get started.
+
+--------------------------------------------------------------------------------
+2.5  (Optional) Add an AI API key
+--------------------------------------------------------------------------------
+
+The application RUNS FINE WITHOUT A KEY. Read this section to understand the
+difference, then decide.
+
+WITHOUT a key ("extractive mode"):
+    The app works end to end. Answers are assembled by picking the most
+    relevant sentences out of the matching policy sections. Citations are real.
+    The UI labels these answers "extractive" so nobody is misled.
+
+WITH a key ("generative mode"):
+    A language model writes the answer in proper prose, and adds a second layer
+    of judgement - it can read the excerpt and say "this does not actually
+    answer the question" where scoring alone cannot.
+
+To add one, get a free Gemini key at:
+
+    https://aistudio.google.com/apikey
+
+Then open backend\.env in Notepad and put the key on the GOOGLE_API_KEY line:
+
+    GOOGLE_API_KEY=your-key-here
+
+Save the file and restart the backend. You can confirm it took effect: the
+sidebar in the web console changes from "Degraded mode" to "Operational".
+
+--------------------------------------------------------------------------------
+2.6  Load the sample policy documents
+--------------------------------------------------------------------------------
+
+The app starts with an empty knowledge base. This command fills it with seven
+realistic policy documents and some sample questions:
+
+    python -m scripts.seed --reset --demo-queries
+
+What the flags do:
+
+    --reset          wipe the existing index first and start clean
+    --demo-queries   also run 20 sample questions, so the Insights dashboard
+                     has real data in it instead of being empty
+
+WARNING ABOUT THE FIRST RUN: the very first time you run this, it downloads an
+80 MB embedding model (all-MiniLM-L6-v2). It will look frozen for a minute or
+two while a progress bar fills. This happens ONCE - the model is cached in
+C:\Users\<you>\.cache\chroma and reused forever after.
+
+When it finishes you should see something like:
+
+    Indexed Leave and Time Off Policy: 13 chunks in 5151 ms
+    Indexed Expense and Travel Policy: 11 chunks in 2358 ms
+    ... (seven documents total)
+    17/20 answered, 3 logged as coverage gaps.
+    Done. 7 document(s) added. Total chunks in index: 99
+    Embedding backend: local (all-MiniLM-L6-v2)
+    Generation mode:   extractive
+
+--------------------------------------------------------------------------------
+2.7  Start the API
+--------------------------------------------------------------------------------
+
+    uvicorn app.main:app --reload --port 8010
+
+Leave this terminal open. The server runs until you stop it.
+
+You should see:
+
+    INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+
+Check it is alive by opening this in a browser:
+
+    http://localhost:8010/api/health
+
+You should get JSON back showing 7 documents and 99 chunks.
+
+There is also auto-generated interactive API documentation at:
+
+    http://localhost:8010/docs
+
+That page lets you call every endpoint from the browser, which is a good way to
+show the backend on its own.
+
+
+================================================================================
+3. FRONTEND - FIRST TIME SETUP
+================================================================================
+
+Open a SECOND terminal window. Leave the backend running in the first one.
+
+    cd C:\Users\aakas\Desktop\TVM_AI_PROJECT\frontend
+
+--------------------------------------------------------------------------------
+3.1  Install the Node packages
+--------------------------------------------------------------------------------
+
+    npm install
+
+This takes roughly 5-10 minutes on a first run and creates a "node_modules"
+folder. You only do this once.
+
+--------------------------------------------------------------------------------
+3.2  Create the configuration file
+--------------------------------------------------------------------------------
+
+Windows PowerShell:
+
+    Copy-Item .env.local.example .env.local
+
+Windows Command Prompt:
+
+    copy .env.local.example .env.local
+
+macOS / Linux / Git Bash:
+
+    cp .env.local.example .env.local
+
+This one line tells the web page where the API lives:
+
+    NEXT_PUBLIC_API_BASE_URL=http://localhost:8010
+
+--------------------------------------------------------------------------------
+3.3  Start the web console
+--------------------------------------------------------------------------------
+
+    npm run dev
+
+Leave this terminal open too. You should see:
+
+    ▲ Next.js 15.5.24
+    - Local:  http://localhost:3000
+    ✓ Ready in 40s
+
+The first page you open takes 10-30 seconds to appear because Next.js compiles
+it on demand. This is only slow in development mode, and only the first time.
+
+Now open:
+
+    http://localhost:3000
+
+
+================================================================================
+4. EVERY TIME AFTER THAT (THE SHORT VERSION)
+================================================================================
+
+Once setup is done, starting the project is just two terminals:
+
+TERMINAL 1 - backend:
+
+    cd C:\Users\aakas\Desktop\TVM_AI_PROJECT\backend
+    .\.venv\Scripts\Activate.ps1
+    uvicorn app.main:app --reload --port 8010
+
+TERMINAL 2 - frontend:
+
+    cd C:\Users\aakas\Desktop\TVM_AI_PROJECT\frontend
+    npm run dev
+
+Then open http://localhost:3000
+
+You do NOT need to re-run the seed script. The indexed documents are saved on
+disk in backend/data/ and survive restarts.
+
+--------------------------------------------------------------------------------
+Shortcut scripts
+--------------------------------------------------------------------------------
+
+There are two PowerShell helper scripts in the project root that do all of the
+above for you, including creating the venv and installing packages if missing:
+
+    .\start-backend.ps1      (run in terminal 1)
+    .\start-frontend.ps1     (run in terminal 2)
+
+
+================================================================================
+5. HOW TO STOP IT
+================================================================================
+
+Press CTRL+C in each terminal window.
+
+If a port stays stuck as "in use" after a crash, find and kill the process:
+
+    netstat -ano | findstr :8010
+    taskkill /PID <the number from the last column> /F
+
+Same for port 3000.
+
+
+================================================================================
+6. USING THE APPLICATION
+================================================================================
+
+There are three pages:
+
+    /            Ask Compass    - the employee side. Type a question, get an
+                                  answer where every [1] marker is clickable
+                                  and opens the exact policy section it came
+                                  from.
+
+    /admin       Knowledge Base - the HR side. Upload policy documents (PDF,
+                                  TXT or Markdown), publish or archive them,
+                                  delete them. Archiving removes a document
+                                  from answers immediately without deleting it.
+
+    /insights    Insights       - usage statistics, and the list of questions
+                                  the assistant could NOT answer, ranked by how
+                                  often they were asked.
+
+DEMO_QUESTIONS.md in the project root has 70 questions that are known to work -
+ten for each policy area - plus a list of questions that are correctly refused.
+
+The refusals are the interesting part. Ask "Do we offer a sabbatical after five
+years of service?" The assistant declines rather than guessing, and the question
+then appears on the Insights page as a content gap for the policy team.
+
+
+================================================================================
+7. RESETTING THE DATA
+================================================================================
+
+To wipe everything and start from the sample documents again:
+
+    cd C:\Users\aakas\Desktop\TVM_AI_PROJECT\backend
+    .\.venv\Scripts\Activate.ps1
+    python -m scripts.seed --reset --demo-queries
+
+Stop the backend first, or the file lock can cause an error.
+
+All data lives in backend/data/ :
+
+    data/chroma/         the vector index (the embeddings)
+    data/registry.json   document metadata and the question log
+    data/samples/        the seven sample policy documents
+
+Deleting the whole data folder is safe - the seed script recreates it.
+
+
+================================================================================
+8. TROUBLESHOOTING
+================================================================================
+
+"Cannot reach the Compass API" banner in the web page
+    The backend is not running, or is on a different port. Check terminal 1 is
+    still open and that http://localhost:8010/api/health responds.
+
+"running scripts is disabled on this system" when activating the venv
+    Run this once, then try again:
+    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+"uvicorn is not recognized"
+    The virtual environment is not activated. Your prompt should start with
+    (.venv). Activate it, or use the full path:
+    .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8010
+
+"ModuleNotFoundError: No module named 'app'"
+    You are in the wrong folder. You must run uvicorn from inside backend/,
+    not from the project root.
+
+"Address already in use" / "error while attempting to bind"
+    Something else has the port. See section 5 to find and kill it, or change
+    the port in both config files (section 1).
+
+The seed command looks frozen
+    First run only - it is downloading the 80 MB embedding model. Give it a
+    couple of minutes.
+
+Every question gets refused
+    The knowledge base is empty. Run the seed command from section 2.6.
+
+Answers look like quoted sentences rather than written prose
+    That is extractive mode, which means no API key is configured. This is
+    expected and the UI labels it. See section 2.5 to add a key.
+
+Page takes 30 seconds to load the first time
+    Normal for Next.js development mode. Only the first visit to each page.
+
+npm install fails with a permissions or network error
+    Delete node_modules and package-lock.json, then run npm install again.
+
+
+================================================================================
+9. WHAT IS ACTUALLY RUNNING
+================================================================================
+
+Backend (Python)
+    FastAPI          the web API framework
+    ChromaDB         local vector database, stores the policy text as
+                     embeddings so it can be searched by meaning
+    LangChain        prompt construction and text splitting
+    pypdf            reads PDF uploads
+    all-MiniLM-L6-v2 the embedding model, runs locally, no internet needed
+                     after the first download
+
+Frontend (JavaScript)
+    Next.js 15       React framework, App Router
+    TypeScript       typed JavaScript
+    Tailwind CSS     styling
+    react-hook-form  form handling
+    zod              form validation rules
+
+There is no SQL database. Document metadata is kept in a single JSON file
+written atomically, which is enough for one server process and means there is
+nothing extra to install or administer.
+
+================================================================================
