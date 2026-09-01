@@ -1,0 +1,110 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Compass: start backend",
+      "type": "shell",
+      "windows": {
+        "command": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8010"
+      },
+      "linux": {
+        "command": "${workspaceFolder}/backend/.venv/bin/python -m uvicorn app.main:app --reload --port 8010"
+      },
+      "osx": {
+        "command": "${workspaceFolder}/backend/.venv/bin/python -m uvicorn app.main:app --reload --port 8010"
+      },
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "isBackground": true,
+      "presentation": {
+        "group": "compass",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "pattern": [
+          {
+            "regexp": "^\\s*File \"(.*)\", line (\\d+)",
+            "file": 1,
+            "line": 2
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Started reloader process.*",
+          "endsPattern": ".*Application startup complete.*"
+        }
+      }
+    },
+    {
+      "label": "Compass: start frontend",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "isBackground": true,
+      "presentation": {
+        "group": "compass",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "pattern": [
+          {
+            "regexp": "^\\s*(.*):(\\d+):(\\d+)\\s+(error|warning)\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*(Starting|Compiling).*",
+          "endsPattern": ".*(Ready in|Compiled).*"
+        }
+      }
+    },
+    {
+      "label": "Start Compass",
+      "dependsOn": ["Compass: start backend", "Compass: start frontend"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Compass: seed sample policies",
+      "type": "shell",
+      "windows": {
+        "command": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe -m scripts.seed --reset --demo-queries"
+      },
+      "linux": {
+        "command": "${workspaceFolder}/backend/.venv/bin/python -m scripts.seed --reset --demo-queries"
+      },
+      "osx": {
+        "command": "${workspaceFolder}/backend/.venv/bin/python -m scripts.seed --reset --demo-queries"
+      },
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Compass: check Gemini key",
+      "type": "shell",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ${workspaceFolder}\\check-key.ps1"
+      },
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Compass: run retrieval eval",
+      "detail": "Costs ~46 LLM calls. Do not run immediately before a demo on the free tier.",
+      "type": "shell",
+      "command": "bash eval/run.sh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}

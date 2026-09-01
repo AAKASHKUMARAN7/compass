@@ -20,6 +20,12 @@ next-env.d.ts
 
 # Editors / OS
 .DS_Store
-.vscode/
 .idea/
+
+# VS Code: share the run/debug setup, keep personal state out.
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/extensions.json
 .smoke/
