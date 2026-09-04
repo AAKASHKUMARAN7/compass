@@ -1,3 +1,14 @@
+# In-policy questions that must be answered.
+#
+# NOTE: this set is written in GLOBAL vocabulary and is the regression gate for
+# the default reader. Running it as another jurisdiction surfaces vocabulary
+# drift rather than a defect -- an India reader asks about "earned leave", not
+# "annual leave", and jurisdiction precedence removes the global document that
+# used the global term. Each jurisdiction needs its own golden set, owned by
+# that jurisdiction's policy team.
+#
+#   COMPASS_JURISDICTION=uk bash eval/run.sh
+#
 list total leaves available??
 list total leaves available
 how many leaves do I get

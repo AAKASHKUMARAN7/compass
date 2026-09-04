@@ -9,7 +9,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from app.core.errors import AppError
 from app.dependencies import get_document_service
-from app.schemas.common import DocumentStatus, Page, PolicyCategory
+from app.schemas.common import DocumentStatus, Jurisdiction, Page, PolicyCategory
 from app.schemas.documents import (
     DocumentDetail,
     DocumentMetadataForm,
@@ -38,6 +38,7 @@ async def upload_document(
     title: str = Form(...),
     owner: str = Form(...),
     category: PolicyCategory = Form(PolicyCategory.OTHER),
+    jurisdiction: Jurisdiction = Form(Jurisdiction.GLOBAL),
     version_label: str = Form("v1.0"),
     effective_date: date | None = Form(None),
     summary: str | None = Form(None),
@@ -53,6 +54,7 @@ async def upload_document(
             title=title,
             owner=owner,
             category=category,
+            jurisdiction=jurisdiction,
             version_label=version_label,
             effective_date=effective_date,
             summary=summary,

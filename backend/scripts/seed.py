@@ -19,13 +19,14 @@ from app.config import get_settings  # noqa: E402
 from app.core.logging import configure_logging  # noqa: E402
 from app.dependencies import build_container  # noqa: E402
 from app.schemas.chat import AskRequest  # noqa: E402
-from app.schemas.common import AnswerStatus, PolicyCategory  # noqa: E402
+from app.schemas.common import AnswerStatus, Jurisdiction, PolicyCategory  # noqa: E402
 from app.schemas.documents import DocumentMetadataForm  # noqa: E402
 
 SAMPLES: list[dict] = [
     {
         "file": "leave-and-time-off-policy.md",
         "title": "Leave and Time Off Policy",
+        "jurisdiction": Jurisdiction.GLOBAL,
         "category": PolicyCategory.LEAVE_AND_TIME_OFF,
         "owner": "People Operations",
         "version_label": "v3.1",
@@ -35,6 +36,7 @@ SAMPLES: list[dict] = [
     {
         "file": "expense-and-travel-policy.md",
         "title": "Expense and Travel Policy",
+        "jurisdiction": Jurisdiction.GLOBAL,
         "category": PolicyCategory.EXPENSES_AND_TRAVEL,
         "owner": "Finance",
         "version_label": "v2.4",
@@ -44,6 +46,7 @@ SAMPLES: list[dict] = [
     {
         "file": "information-security-policy.md",
         "title": "Information Security Policy",
+        "jurisdiction": Jurisdiction.GLOBAL,
         "category": PolicyCategory.SECURITY_AND_IT,
         "owner": "Information Security",
         "version_label": "v4.0",
@@ -53,6 +56,7 @@ SAMPLES: list[dict] = [
     {
         "file": "compensation-policy.md",
         "title": "Compensation Policy",
+        "jurisdiction": Jurisdiction.GLOBAL,
         "category": PolicyCategory.COMPENSATION,
         "owner": "People Operations",
         "version_label": "v2.2",
@@ -62,6 +66,7 @@ SAMPLES: list[dict] = [
     {
         "file": "benefits-policy.md",
         "title": "Employee Benefits Policy",
+        "jurisdiction": Jurisdiction.GLOBAL,
         "category": PolicyCategory.BENEFITS,
         "owner": "People Operations",
         "version_label": "v3.0",
@@ -71,6 +76,7 @@ SAMPLES: list[dict] = [
     {
         "file": "code-of-conduct-policy.md",
         "title": "Code of Conduct and Compliance Policy",
+        "jurisdiction": Jurisdiction.GLOBAL,
         "category": PolicyCategory.CONDUCT_AND_COMPLIANCE,
         "owner": "Legal and Compliance",
         "version_label": "v5.1",
@@ -80,11 +86,32 @@ SAMPLES: list[dict] = [
     {
         "file": "workplace-and-remote-work-policy.md",
         "title": "Workplace and Remote Work Policy",
+        "jurisdiction": Jurisdiction.GLOBAL,
         "category": PolicyCategory.WORKPLACE,
         "owner": "Workplace Operations",
         "version_label": "v2.6",
         "effective_date": date(2025, 5, 1),
         "summary": "Hybrid attendance, core hours, desk booking, remote workspace rules and health and safety.",
+    },
+    {
+        "file": "leave-policy-uk.md",
+        "title": "Leave and Time Off Policy (UK)",
+        "jurisdiction": Jurisdiction.UK,
+        "category": PolicyCategory.LEAVE_AND_TIME_OFF,
+        "owner": "People Operations UK",
+        "version_label": "v2.0",
+        "effective_date": date(2025, 4, 1),
+        "summary": "UK entitlements: 27 days annual leave, statutory sick pay, shared parental leave.",
+    },
+    {
+        "file": "leave-policy-india.md",
+        "title": "Leave and Time Off Policy (India)",
+        "jurisdiction": Jurisdiction.INDIA,
+        "category": PolicyCategory.LEAVE_AND_TIME_OFF,
+        "owner": "People Operations India",
+        "version_label": "v2.0",
+        "effective_date": date(2025, 4, 1),
+        "summary": "India entitlements: 22 days earned leave, casual and sick leave, encashment.",
     },
 ]
 
@@ -166,6 +193,7 @@ def main() -> int:
             metadata=DocumentMetadataForm(
                 title=sample["title"],
                 category=sample["category"],
+                jurisdiction=sample["jurisdiction"],
                 owner=sample["owner"],
                 version_label=sample["version_label"],
                 effective_date=sample["effective_date"],

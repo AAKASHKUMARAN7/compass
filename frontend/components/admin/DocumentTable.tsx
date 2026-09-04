@@ -22,6 +22,7 @@ import {
   formatNumber,
   formatRelativeTime,
 } from "@/lib/format";
+import { JURISDICTION_LABELS } from "@/lib/persona";
 import type { DocumentRecord } from "@/types/api";
 
 export function DocumentTable({
@@ -139,6 +140,11 @@ export function DocumentTable({
 
                   <td className="px-3 py-3 text-[12.5px] text-ink-muted">
                     {CATEGORY_LABELS[document.category]}
+                    {document.jurisdiction !== "global" ? (
+                      <span className="ml-1.5 rounded bg-brand-50 px-1 py-px text-2xs font-medium text-brand-700">
+                        {JURISDICTION_LABELS[document.jurisdiction]}
+                      </span>
+                    ) : null}
                   </td>
 
                   <td className="px-3 py-3 text-[12.5px] text-ink-muted">

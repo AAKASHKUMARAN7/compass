@@ -6,7 +6,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.common import AnswerStatus, Confidence, FeedbackRating, PolicyCategory
+from app.schemas.common import (
+    AnswerStatus,
+    Confidence,
+    FeedbackRating,
+    Jurisdiction,
+    PolicyCategory,
+)
 
 
 class AskRequest(BaseModel):
@@ -15,6 +21,10 @@ class AskRequest(BaseModel):
         None, description="Optional filter to restrict retrieval to one policy area."
     )
     asked_by: str = Field("employee@company.com", max_length=120)
+    jurisdiction: Jurisdiction = Field(
+        Jurisdiction.GLOBAL,
+        description="The reader's entity. Scopes retrieval to their own rules plus global.",
+    )
 
     @field_validator("question")
     @classmethod
@@ -34,6 +44,7 @@ class Citation(BaseModel):
     page: int | None
     version_label: str
     owner: str
+    jurisdiction: str
     effective_date: str | None
     relevance: float = Field(..., ge=0.0, le=1.0)
     excerpt: str

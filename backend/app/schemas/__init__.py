@@ -20,6 +20,7 @@ from app.schemas.common import (
     DocumentStatus,
     FeedbackRating,
     HealthResponse,
+    Jurisdiction,
     Page,
     PolicyCategory,
 )
@@ -53,6 +54,7 @@ __all__ = [
     "FeedbackRequest",
     "HealthResponse",
     "IngestionResult",
+    "Jurisdiction",
     "KpiSummary",
     "Page",
     "PolicyCategory",

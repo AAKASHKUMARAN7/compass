@@ -12,6 +12,8 @@ export type PolicyCategory =
   | "workplace"
   | "other";
 
+export type Jurisdiction = "global" | "uk" | "india" | "us" | "singapore";
+
 export type Confidence = "high" | "medium" | "low" | "none";
 export type AnswerStatus = "answered" | "no_coverage";
 export type FeedbackRating = "helpful" | "not_helpful";
@@ -47,6 +49,7 @@ export interface DocumentRecord {
   id: string;
   title: string;
   category: PolicyCategory;
+  jurisdiction: Jurisdiction;
   owner: string;
   version_label: string;
   effective_date: string | null;
@@ -91,6 +94,7 @@ export interface Citation {
   page: number | null;
   version_label: string;
   owner: string;
+  jurisdiction: Jurisdiction;
   effective_date: string | null;
   relevance: number;
   excerpt: string;

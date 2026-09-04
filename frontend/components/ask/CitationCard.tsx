@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, FileText } from "lucide-react";
 
 import { cn, formatDate } from "@/lib/format";
+import { JURISDICTION_LABELS } from "@/lib/persona";
 import type { Citation } from "@/types/api";
 
 export function CitationCard({
@@ -57,6 +58,17 @@ export function CitationCard({
             ) : null}
             <Dot />
             <span>{citation.version_label}</span>
+            <Dot />
+            <span
+              className={cn(
+                "rounded px-1 py-px font-medium",
+                citation.jurisdiction === "global"
+                  ? "bg-slate-100 text-ink-muted"
+                  : "bg-brand-50 text-brand-700",
+              )}
+            >
+              {JURISDICTION_LABELS[citation.jurisdiction]}
+            </span>
             {citation.effective_date ? (
               <>
                 <Dot />

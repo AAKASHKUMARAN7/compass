@@ -74,6 +74,7 @@ class DocumentService:
             "id": document_id,
             "title": metadata.title.strip(),
             "category": metadata.category.value,
+            "jurisdiction": metadata.jurisdiction.value,
             "owner": metadata.owner.strip(),
             "version_label": metadata.version_label.strip() or "v1.0",
             "effective_date": effective_date,
@@ -99,6 +100,7 @@ class DocumentService:
                 base_metadata={
                     "document_title": record["title"],
                     "category": record["category"],
+                    "jurisdiction": record["jurisdiction"],
                     "owner": record["owner"],
                     "version_label": record["version_label"],
                     "effective_date": effective_date or "",

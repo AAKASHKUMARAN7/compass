@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, FileStack, MessagesSquare, ShieldCheck } from "lucide-react";
+import { BarChart3, FileStack, MessagesSquare, ShieldCheck, UserRound } from "lucide-react";
 
 import { api } from "@/lib/api";
 import { cn, formatNumber } from "@/lib/format";
+import { JURISDICTION_LABELS, PERSONAS, usePersona } from "@/lib/persona";
 import type { HealthResponse } from "@/types/api";
 
 const NAV = [
@@ -105,6 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
 
+        <PersonaPanel />
         <SystemPanel health={health} reachable={reachable} />
       </aside>
 
@@ -112,6 +114,46 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileNav pathname={pathname} />
         <main className="flex-1">{children}</main>
       </div>
+    </div>
+  );
+}
+
+function PersonaPanel() {
+  const { persona, setPersona } = usePersona();
+
+  return (
+    <div className="border-t border-white/5 px-5 py-4">
+      <p className="label-caps text-slate-500">Viewing as</p>
+      <div className="mt-2 flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rail-active text-slate-300">
+          <UserRound className="h-3.5 w-3.5" aria-hidden />
+        </span>
+        <span className="min-w-0 leading-tight">
+          <span className="block truncate text-[12.5px] font-medium text-slate-200">
+            {persona.name}
+          </span>
+          <span className="block truncate text-2xs text-slate-500">{persona.role}</span>
+        </span>
+      </div>
+
+      <label htmlFor="persona" className="sr-only">
+        Switch persona
+      </label>
+      <select
+        id="persona"
+        value={persona.id}
+        onChange={(event) => setPersona(event.target.value)}
+        className="mt-2.5 w-full cursor-pointer rounded-md border border-white/10 bg-rail-hover px-2 py-1.5 text-2xs text-slate-300 transition-colors hover:border-white/20 focus:border-brand-400 focus:outline-none"
+      >
+        {PERSONAS.map((item) => (
+          <option key={item.id} value={item.id} className="bg-rail text-slate-200">
+            {item.name} — {JURISDICTION_LABELS[item.jurisdiction]}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1.5 text-2xs leading-snug text-slate-500">
+        Retrieval is scoped to this entity plus global policy.
+      </p>
     </div>
   );
 }

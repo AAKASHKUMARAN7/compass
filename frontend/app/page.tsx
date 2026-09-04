@@ -8,6 +8,7 @@ import { AskForm } from "@/components/ask/AskForm";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
+import { usePersona } from "@/lib/persona";
 import { api, ApiError } from "@/lib/api";
 import type { AskResponse, PolicyCategory } from "@/types/api";
 
@@ -21,6 +22,7 @@ const SUGGESTIONS = [
 
 export default function AskPage() {
   const { notify } = useToast();
+  const { persona } = usePersona();
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [pending, setPending] = useState(false);
   const [prefill, setPrefill] = useState<string | undefined>(undefined);
@@ -29,7 +31,12 @@ export default function AskPage() {
     async (question: string, category: PolicyCategory | null) => {
       setPending(true);
       try {
-        const result = await api.ask({ question, category });
+        const result = await api.ask({
+          question,
+          category,
+          jurisdiction: persona.jurisdiction,
+          asked_by: persona.email,
+        });
         setAnswer(result);
         if (result.status === "no_coverage") {
           notify({
@@ -51,7 +58,7 @@ export default function AskPage() {
         setPending(false);
       }
     },
-    [notify],
+    [notify, persona],
   );
 
   const useSuggestion = useCallback((question: string) => {

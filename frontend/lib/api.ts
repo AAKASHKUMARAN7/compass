@@ -16,6 +16,7 @@ import type {
   HealthResponse,
   IngestionResult,
   Page,
+  Jurisdiction,
   PolicyCategory,
   QueryLogEntry,
 } from "@/types/api";
@@ -150,13 +151,19 @@ export const api = {
   deleteDocument: (id: string) =>
     request<void>(`/api/documents/${id}`, { method: "DELETE" }),
 
-  ask: (payload: { question: string; category?: PolicyCategory | null; asked_by?: string }) =>
+  ask: (payload: {
+    question: string;
+    category?: PolicyCategory | null;
+    asked_by?: string;
+    jurisdiction?: Jurisdiction;
+  }) =>
     request<AskResponse>("/api/chat/ask", {
       method: "POST",
       body: JSON.stringify({
         question: payload.question,
         category: payload.category ?? null,
         asked_by: payload.asked_by ?? "employee@company.com",
+        jurisdiction: payload.jurisdiction ?? "global",
       }),
       timeoutMs: 90_000,
     }),

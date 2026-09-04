@@ -29,6 +29,22 @@ class PolicyCategory(str, Enum):
     OTHER = "other"
 
 
+class Jurisdiction(str, Enum):
+    """Where a policy applies, and where a reader sits.
+
+    GLOBAL is the firm-wide baseline every reader can see. A reader in a
+    specific jurisdiction sees GLOBAL plus their own, and never another
+    jurisdiction's -- a UK employee must not be cited an Indian entity's leave
+    entitlement, because it is not the rule that governs them.
+    """
+
+    GLOBAL = "global"
+    UK = "uk"
+    INDIA = "india"
+    US = "us"
+    SINGAPORE = "singapore"
+
+
 class Confidence(str, Enum):
     HIGH = "high"
     MEDIUM = "medium"

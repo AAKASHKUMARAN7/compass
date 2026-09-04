@@ -11,6 +11,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import { CATEGORY_OPTIONS, cn, formatBytes } from "@/lib/format";
+import { JURISDICTION_OPTIONS } from "@/lib/persona";
 import type { IngestionResult } from "@/types/api";
 
 const ACCEPTED = [".pdf", ".txt", ".md", ".markdown"];
@@ -28,6 +29,7 @@ const schema = z.object({
     .min(2, "Name the team accountable for this policy.")
     .max(80, "Owner is limited to 80 characters."),
   category: z.string().min(1, "Select a policy area."),
+  jurisdiction: z.string().min(1, "Select which entity this governs."),
   version_label: z
     .string()
     .trim()
@@ -59,6 +61,7 @@ export function UploadForm({ onIngested }: { onIngested: (result: IngestionResul
       title: "",
       owner: "",
       category: "other",
+      jurisdiction: "global",
       version_label: "v1.0",
       effective_date: "",
       summary: "",
@@ -98,6 +101,7 @@ export function UploadForm({ onIngested }: { onIngested: (result: IngestionResul
     form.append("title", values.title.trim());
     form.append("owner", values.owner.trim());
     form.append("category", values.category);
+    form.append("jurisdiction", values.jurisdiction);
     form.append("version_label", values.version_label.trim());
     if (values.effective_date) form.append("effective_date", values.effective_date);
     if (values.summary?.trim()) form.append("summary", values.summary.trim());
@@ -224,6 +228,26 @@ export function UploadForm({ onIngested }: { onIngested: (result: IngestionResul
         >
           <Select id="category" invalid={Boolean(errors.category)} {...register("category")}>
             {CATEGORY_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field
+          label="Applies to"
+          htmlFor="jurisdiction"
+          error={errors.jurisdiction?.message}
+          hint="Overrides global"
+          required
+        >
+          <Select
+            id="jurisdiction"
+            invalid={Boolean(errors.jurisdiction)}
+            {...register("jurisdiction")}
+          >
+            {JURISDICTION_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

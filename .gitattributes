@@ -1,0 +1,7 @@
+# Keep shell scripts and the eval corpus LF so they behave identically on
+# Windows checkouts. run.sh strips CR defensively as well, but a bare "\r"
+# line reading as a test case was a real bug worth preventing at the source.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.pdf binary

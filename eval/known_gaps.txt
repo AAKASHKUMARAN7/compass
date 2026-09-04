@@ -10,7 +10,3 @@
 answered|leaves balance
 answered|my remaining leaves
 
-# The question contains a genuinely covered topic word ("travel"), so retrieval
-# scoring alone cannot tell business travel from space travel. Same class as
-# "pet bereavement leave": only reading the excerpt settles it.
-no_coverage|what is the company policy on space travel

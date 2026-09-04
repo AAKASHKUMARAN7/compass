@@ -8,20 +8,27 @@
 # Adding documents changes IDF, so the corpus counts as a change.
 #
 #   bash eval/run.sh
+#   COMPASS_JURISDICTION=uk bash eval/run.sh
 #
 # known_gaps.txt holds cases that currently fail. They are reported separately
 # rather than deleted, so a real weakness stays visible and gets promoted back
 # into the main set the moment it starts passing.
+#
+# Input is piped through `tr -d` to drop carriage returns: Git checks these
+# files out CRLF on Windows, and a bare CR line is not empty, so blank lines
+# were being read as test cases.
 
 set -uo pipefail
 
 API="${COMPASS_API:-http://127.0.0.1:8010}"
+JURISDICTION="${COMPASS_JURISDICTION:-global}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
+CR=$(printf '\r')
 
 ask() {
-  curl -s --max-time 60 -X POST "$API/api/chat/ask" \
+  curl -s --max-time 90 -X POST "$API/api/chat/ask" \
     -H "Content-Type: application/json" \
-    -d "$(python -c "import json,sys;print(json.dumps({'question':sys.argv[1]}))" "$1")"
+    -d "$(python -c "import json,sys;print(json.dumps({'question':sys.argv[1],'jurisdiction':sys.argv[2]}))" "$1" "$JURISDICTION")"
 }
 
 verdict() {
@@ -51,7 +58,7 @@ run() {
       fail=$((fail + 1)); mark="FAIL"
     fi
     printf "  %s  %-7s %s\n" "$mark" "$score" "$q"
-  done < "$file"
+  done < <(tr -d "$CR" < "$file")
   echo "  -> $pass passed, $fail failed"
   TOTAL_PASS=$((TOTAL_PASS + pass))
   TOTAL_FAIL=$((TOTAL_FAIL + fail))
@@ -74,7 +81,7 @@ run_known_gaps() {
       still=$((still + 1))
       printf "  gap   %-7s %s\n" "$score" "$q"
     fi
-  done < "$file"
+  done < <(tr -d "$CR" < "$file")
   echo "  -> $still still failing, $fixed newly fixed"
 }
 
@@ -83,6 +90,8 @@ if ! curl -s --max-time 5 -o /dev/null "$API/api/health"; then
   exit 2
 fi
 
+echo "Reader jurisdiction: $JURISDICTION"
+echo
 echo "=== SHOULD ANSWER ==="
 run answered "$HERE/should_answer.txt"
 

@@ -6,7 +6,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
-from app.schemas.common import DocumentStatus, PolicyCategory
+from app.schemas.common import DocumentStatus, Jurisdiction, PolicyCategory
 
 
 class DocumentMetadataForm(BaseModel):
@@ -14,6 +14,10 @@ class DocumentMetadataForm(BaseModel):
 
     title: str = Field(..., min_length=3, max_length=160)
     category: PolicyCategory = PolicyCategory.OTHER
+    jurisdiction: Jurisdiction = Field(
+        Jurisdiction.GLOBAL,
+        description="Which entity this governs. 'global' is the firm-wide baseline.",
+    )
     owner: str = Field(..., min_length=2, max_length=80)
     version_label: str = Field("v1.0", max_length=32)
     effective_date: date | None = None
@@ -29,6 +33,7 @@ class DocumentRecord(BaseModel):
     id: str
     title: str
     category: PolicyCategory
+    jurisdiction: Jurisdiction = Jurisdiction.GLOBAL
     owner: str
     version_label: str
     effective_date: date | None

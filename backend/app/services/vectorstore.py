@@ -181,6 +181,7 @@ class VectorStore:
         top_k: int,
         allowed_document_ids: Iterable[str] | None = None,
         category: str | None = None,
+        jurisdiction: str | None = None,
     ) -> list[RetrievedChunk]:
         """Hybrid search over the documents the reader may see.
 
@@ -189,7 +190,7 @@ class VectorStore:
         model handles badly. Candidates from both are fused on a single [0, 1]
         scale so one calibrated relevance floor still governs the gate.
         """
-        where = self._build_filter(allowed_document_ids, category)
+        where = self._build_filter(allowed_document_ids, category, jurisdiction)
         if where is None:
             return []
 
@@ -199,7 +200,7 @@ class VectorStore:
         # be chosen after merging rather than by either arm alone.
         fetch = max(top_k * 2, top_k + 4)
         candidates = self._vector_candidates(query, fetch, where)
-        self._merge_lexical(query, candidates, fetch, allowed, category)
+        self._merge_lexical(query, candidates, fetch, allowed, category, jurisdiction)
 
         ranked = sorted(candidates.values(), key=lambda chunk: chunk.score, reverse=True)
         return ranked[:top_k]
@@ -260,6 +261,7 @@ class VectorStore:
         fetch: int,
         allowed: set[str] | None,
         category: str | None,
+        jurisdiction: str | None = None,
     ) -> None:
         """Fuse lexical coverage into the candidate set, pulling in new chunks."""
         lexical_hits = self._lexical.top_chunk_ids(
@@ -282,6 +284,10 @@ class VectorStore:
                 # The vector arm applies its filter in the query; chunks reached
                 # only through the lexical index must be filtered here.
                 if category and str(metadata.get("category", "")) != category:
+                    continue
+                if jurisdiction and str(
+                    metadata.get("jurisdiction", "global")
+                ) not in (jurisdiction, "global"):
                     continue
                 existing = RetrievedChunk(
                     chunk_id=chunk_id,
@@ -323,8 +329,16 @@ class VectorStore:
 
     @staticmethod
     def _build_filter(
-        allowed_document_ids: Iterable[str] | None, category: str | None
+        allowed_document_ids: Iterable[str] | None,
+        category: str | None,
+        jurisdiction: str | None = None,
     ) -> dict[str, Any] | None:
+        """Compose the metadata constraints a chunk must satisfy to be a candidate.
+
+        Scoping lives here rather than in the UI on purpose: a reader can never
+        be cited a document that was never a retrieval candidate. The same
+        clause list is where a document-level ACL belongs.
+        """
         clauses: list[dict[str, Any]] = []
 
         if allowed_document_ids is not None:
@@ -335,6 +349,11 @@ class VectorStore:
 
         if category:
             clauses.append({"category": category})
+
+        if jurisdiction:
+            # A reader sees their own entity's rules plus the firm-wide baseline,
+            # and never another entity's.
+            clauses.append({"jurisdiction": {"$in": [jurisdiction, "global"]}})
 
         if not clauses:
             return {}

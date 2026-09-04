@@ -55,6 +55,11 @@ class RagService:
             top_k=self._settings.retrieval_top_k,
             allowed_document_ids=published_ids,
             category=request.category.value if request.category else None,
+            jurisdiction=request.jurisdiction.value,
+        )
+
+        retrieved = self._apply_jurisdiction_precedence(
+            retrieved, request.jurisdiction.value
         )
 
         top_score = retrieved[0].score if retrieved else 0.0
@@ -133,6 +138,51 @@ class RagService:
         )
         return response
 
+    @staticmethod
+    def _apply_jurisdiction_precedence(
+        retrieved: list[RetrievedChunk], reader_jurisdiction: str
+    ) -> list[RetrievedChunk]:
+        """Let a local policy supersede the firm-wide baseline.
+
+        Retrieval returns both the reader's entity policy and the global one,
+        and similarity alone does not know which governs -- so a UK reader was
+        being handed "25 days ... and 27 days" from two documents at once.
+        Policy hierarchies do not work that way: where a jurisdiction has
+        published its own rule, that rule replaces the baseline.
+
+        Suppression is scoped to the policy area they actually overlap on, so a
+        UK reader asking about expenses still gets the global expense policy
+        when no UK-specific one exists.
+        """
+        if reader_jurisdiction == "global":
+            return retrieved
+
+        superseded_categories = {
+            str(chunk.metadata.get("category", ""))
+            for chunk in retrieved
+            if str(chunk.metadata.get("jurisdiction", "global")) == reader_jurisdiction
+        }
+        if not superseded_categories:
+            return retrieved
+
+        kept = [
+            chunk
+            for chunk in retrieved
+            if not (
+                str(chunk.metadata.get("jurisdiction", "global")) == "global"
+                and str(chunk.metadata.get("category", "")) in superseded_categories
+            )
+        ]
+        dropped = len(retrieved) - len(kept)
+        if dropped:
+            logger.info(
+                "jurisdiction_precedence reader=%s superseded_categories=%s dropped=%d",
+                reader_jurisdiction,
+                sorted(superseded_categories),
+                dropped,
+            )
+        return kept or retrieved
+
     def _bind_citations(
         self, used_excerpts: list[int], retrieved: list[RetrievedChunk]
     ) -> list[Citation]:
@@ -153,6 +203,7 @@ class RagService:
                     page=chunk.page,
                     version_label=str(metadata.get("version_label", "")),
                     owner=str(metadata.get("owner", "")),
+                    jurisdiction=str(metadata.get("jurisdiction", "global")),
                     effective_date=str(metadata.get("effective_date") or "") or None,
                     relevance=round(chunk.score, 4),
                     excerpt=_truncate(chunk.text),
