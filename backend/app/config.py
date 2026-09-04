@@ -81,10 +81,31 @@ class Settings(BaseSettings):
     min_relevance_score: float = 0.48
     high_confidence_score: float = 0.66
 
+
     # -- Storage ----------------------------------------------------------
     data_dir: Path = BASE_DIR / "data"
     chroma_collection: str = "policy_chunks"
     max_upload_bytes: int = 15 * 1024 * 1024
+
+    # Policy areas whose answers carry regulatory or disciplinary consequence.
+    # Everything unlisted is STANDARD.
+    #
+    # Note what this does NOT do: raise the retrieval floor. That was the first
+    # design and measurement rejected it. On this corpus, valid high-risk
+    # questions score from 0.546 upward while out-of-policy questions reach
+    # 0.774 -- the populations overlap completely, so no floor separates them.
+    # A higher bar only converted correct answers into referrals without making
+    # anything safer.
+    #
+    # The tier changes what happens around the answer instead: a high-risk
+    # answer names a verification owner, and a high-risk question the model
+    # itself declines is routed to that owner rather than filed as an
+    # anonymous coverage gap.
+    risk_tiers: dict[str, str] = {
+        "conduct_and_compliance": "critical",
+        "security_and_it": "elevated",
+        "compensation": "elevated",
+    }
 
     @field_validator("cors_origins")
     @classmethod

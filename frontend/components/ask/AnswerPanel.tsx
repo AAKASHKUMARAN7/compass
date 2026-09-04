@@ -7,6 +7,7 @@ import {
   Cpu,
   Quote,
   SearchX,
+  ShieldAlert,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
@@ -17,7 +18,7 @@ import { ConfidenceBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
-import { cn, formatLatency } from "@/lib/format";
+import { CATEGORY_LABELS, cn, formatLatency } from "@/lib/format";
 import type { AskResponse, FeedbackRating } from "@/types/api";
 
 export function AnswerPanel({
@@ -69,36 +70,75 @@ export function AnswerPanel({
   };
 
   const refused = answer.status === "no_coverage";
+  const escalated = answer.status === "escalated";
 
   return (
     <div className="animate-fade-up space-y-4">
       <article
         className={cn(
           "overflow-hidden rounded-xl border bg-surface shadow-card",
-          refused ? "border-amber-200" : "border-line",
+          escalated ? "border-rose-200" : refused ? "border-amber-200" : "border-line",
         )}
       >
         <header
           className={cn(
             "flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3",
-            refused ? "border-amber-200 bg-amber-50/60" : "border-line bg-raised",
+            escalated
+              ? "border-rose-200 bg-rose-50/60"
+              : refused
+                ? "border-amber-200 bg-amber-50/60"
+                : "border-line bg-raised",
           )}
         >
           <div className="flex items-center gap-2">
-            {refused ? (
+            {escalated ? (
+              <ShieldAlert className="h-4 w-4 text-rose-700" aria-hidden />
+            ) : refused ? (
               <SearchX className="h-4 w-4 text-amber-700" aria-hidden />
             ) : (
               <Quote className="h-4 w-4 text-brand-600" aria-hidden />
             )}
             <span className="text-[13px] font-semibold text-ink">
-              {refused ? "No supporting policy found" : "Answer"}
+              {escalated
+                ? "Routed to a specialist"
+                : refused
+                  ? "No supporting policy found"
+                  : "Answer"}
             </span>
+            {answer.risk_tier !== "standard" ? (
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-label",
+                  answer.risk_tier === "critical"
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-amber-100 text-amber-800",
+                )}
+              >
+                {answer.risk_tier} risk
+              </span>
+            ) : null}
           </div>
           <ConfidenceBadge confidence={answer.confidence} score={answer.top_score} />
         </header>
 
         <div className="px-5 py-4">
-          {refused ? (
+          {escalated && answer.escalation ? (
+            <div className="space-y-3">
+              <p className="text-[14.5px] leading-relaxed text-ink">{answer.answer}</p>
+              <div className="rounded-lg border border-rose-200 bg-rose-50/50 px-3.5 py-3">
+                <p className="label-caps text-rose-700">Referred to</p>
+                <p className="mt-1 text-[14px] font-semibold text-ink">
+                  {answer.escalation.team}
+                </p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
+                  {CATEGORY_LABELS[answer.escalation.policy_area]} is a{" "}
+                  {answer.risk_tier}-risk area. {answer.escalation.reason} A confident
+                  wrong answer here carries regulatory or disciplinary consequence, so
+                  the assistant does not answer on partial evidence.
+                </p>
+              </div>
+            </div>
+          ) : refused ? (
             <div className="space-y-3">
               <p className="text-[14.5px] leading-relaxed text-ink">{answer.answer}</p>
               <div className="rounded-lg border border-line bg-canvas px-3.5 py-3">
@@ -114,11 +154,29 @@ export function AnswerPanel({
               </div>
             </div>
           ) : (
-            <AnswerBody
-              text={answer.answer}
-              validMarkers={validMarkers}
-              onCitationClick={jumpToCitation}
-            />
+            <>
+              <AnswerBody
+                text={answer.answer}
+                validMarkers={validMarkers}
+                onCitationClick={jumpToCitation}
+              />
+              {answer.escalation ? (
+                <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 px-3.5 py-2.5">
+                  <ShieldAlert
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700"
+                    aria-hidden
+                  />
+                  <p className="text-[12.5px] leading-relaxed text-amber-900">
+                    <span className="font-semibold">
+                      Confirm with {answer.escalation.team} before acting.
+                    </span>{" "}
+                    {CATEGORY_LABELS[answer.escalation.policy_area]} carries regulatory
+                    or disciplinary consequence, so this answer is a starting point, not
+                    a clearance.
+                  </p>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
 

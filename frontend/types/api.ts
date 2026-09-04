@@ -15,7 +15,15 @@ export type PolicyCategory =
 export type Jurisdiction = "global" | "uk" | "india" | "us" | "singapore";
 
 export type Confidence = "high" | "medium" | "low" | "none";
-export type AnswerStatus = "answered" | "no_coverage";
+export type AnswerStatus = "answered" | "no_coverage" | "escalated";
+export type RiskTier = "standard" | "elevated" | "critical";
+
+export interface Escalation {
+  team: string;
+  policy_area: PolicyCategory;
+  reason: string;
+  observed_score: number;
+}
 export type FeedbackRating = "helpful" | "not_helpful";
 
 export interface Page<T> {
@@ -107,6 +115,8 @@ export interface AskResponse {
   answer: string;
   confidence: Confidence;
   top_score: number;
+  risk_tier: RiskTier;
+  escalation: Escalation | null;
   citations: Citation[];
   follow_up_questions: string[];
   generation_mode: string;

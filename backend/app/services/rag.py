@@ -17,8 +17,8 @@ from datetime import datetime, timezone
 
 from app.config import Settings
 from app.core.logging import get_logger
-from app.schemas.chat import AskRequest, AskResponse, Citation
-from app.schemas.common import AnswerStatus, Confidence
+from app.schemas.chat import AskRequest, AskResponse, Citation, Escalation
+from app.schemas.common import AnswerStatus, Confidence, PolicyCategory, RiskTier
 from app.services.llm import AnswerGenerator
 from app.services.registry import MetadataRegistry
 from app.services.vectorstore import RetrievedChunk, VectorStore
@@ -64,16 +64,27 @@ class RagService:
 
         top_score = retrieved[0].score if retrieved else 0.0
 
+        # The topic is inferred from what retrieval actually matched, not from
+        # what the reader optionally selected -- most people select nothing.
+        tier, area = self._classify_risk(retrieved)
+
         if not retrieved or top_score < self._settings.min_relevance_score:
-            return self._no_coverage_response(request, query_id, top_score, started)
+            return self._no_coverage_response(request, query_id, top_score, started, tier=tier)
 
         generation = self._generator.generate(request.question, retrieved)
 
         if not generation.answered:
-            response = self._no_coverage_response(
-                request, query_id, top_score, started, answer=generation.answer
+            # A model declining in a high-risk area is a different event from
+            # declining about the canteen menu: the reader still needs an answer
+            # and there is a team accountable for giving it.
+            if tier is not RiskTier.STANDARD:
+                return self._escalated_response(
+                    request, query_id, top_score, started, tier, area, retrieved,
+                    generation.answer,
+                )
+            return self._no_coverage_response(
+                request, query_id, top_score, started, answer=generation.answer, tier=tier
             )
-            return response
 
         citations = self._bind_citations(generation.used_excerpts, retrieved)
         confidence = self._resolve_confidence(generation.confidence, top_score, citations)
@@ -86,6 +97,8 @@ class RagService:
             answer=generation.answer,
             confidence=confidence,
             top_score=round(top_score, 4),
+            risk_tier=tier,
+            escalation=self._verification_advisory(tier, area, retrieved),
             citations=citations,
             follow_up_questions=generation.follow_up_questions,
             generation_mode=generation.mode,
@@ -113,6 +126,7 @@ class RagService:
         top_score: float,
         started: float,
         answer: str | None = None,
+        tier: RiskTier = RiskTier.STANDARD,
     ) -> AskResponse:
         latency_ms = int((time.perf_counter() - started) * 1000)
         response = AskResponse(
@@ -122,6 +136,7 @@ class RagService:
             answer=answer or _NO_COVERAGE_MESSAGE,
             confidence=Confidence.NONE,
             top_score=round(top_score, 4),
+            risk_tier=tier,
             citations=[],
             follow_up_questions=[],
             generation_mode=self._generator.mode,
@@ -182,6 +197,109 @@ class RagService:
                 dropped,
             )
         return kept or retrieved
+
+    def _classify_risk(
+        self, retrieved: list[RetrievedChunk]
+    ) -> tuple[RiskTier, PolicyCategory]:
+        """Infer the policy area from the retrieved evidence, then its risk tier."""
+        if not retrieved:
+            return RiskTier.STANDARD, PolicyCategory.OTHER
+
+        area = str(retrieved[0].metadata.get("category", "other"))
+        tier = self._settings.risk_tiers.get(area, RiskTier.STANDARD.value)
+        try:
+            return RiskTier(tier), PolicyCategory(area)
+        except ValueError:
+            return RiskTier.STANDARD, PolicyCategory.OTHER
+
+    @staticmethod
+    def _verification_advisory(
+        tier: RiskTier, area: PolicyCategory, retrieved: list[RetrievedChunk]
+    ) -> Escalation | None:
+        """Name a human to verify with, on answers that carry consequence.
+
+        The answer is still given -- withholding it helps nobody -- but the
+        reader is told who owns the rule, so a high-stakes decision has an
+        obvious next step instead of ending at a chatbot.
+        """
+        if tier is RiskTier.STANDARD or not retrieved:
+            return None
+        owner = str(retrieved[0].metadata.get("owner", "")) or "the policy owner"
+        return Escalation(
+            team=owner,
+            policy_area=area,
+            reason=(
+                "Answered from published policy, but confirm with the owning team "
+                "before acting: this area carries regulatory or disciplinary "
+                "consequence."
+            ),
+            observed_score=round(retrieved[0].score, 4),
+        )
+
+    def _escalated_response(
+        self,
+        request: AskRequest,
+        query_id: str,
+        top_score: float,
+        started: float,
+        tier: RiskTier,
+        area: PolicyCategory,
+        retrieved: list[RetrievedChunk],
+        model_answer: str | None = None,
+    ) -> AskResponse:
+        """Route a declined high-stakes question to the team that owns it.
+
+        Measurement rejected the obvious design of raising the retrieval floor
+        for these areas: valid high-risk questions and out-of-policy ones
+        overlap completely on score, so a higher bar only suppressed correct
+        answers. What is a real signal is the *model* declining -- and a
+        decline about accepting a gift from an audit client deserves a named
+        owner, not the same anonymous coverage-gap treatment as a question
+        about the canteen.
+        """
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        # Route to whoever owns the closest-matching policy. That is already
+        # recorded on every chunk, so referral needs no routing table.
+        owner = str(retrieved[0].metadata.get("owner", "")) or "the policy owner"
+        response = AskResponse(
+            query_id=query_id,
+            question=request.question,
+            status=AnswerStatus.ESCALATED,
+            answer=(
+                (model_answer or "The published policy does not clearly answer this.")
+                + f" Because this is a {tier.value}-risk policy area, it has been routed"
+                " to the team accountable for it rather than filed as an anonymous gap."
+            ),
+            confidence=Confidence.NONE,
+            top_score=round(top_score, 4),
+            risk_tier=tier,
+            escalation=Escalation(
+                team=owner,
+                policy_area=area,
+                reason=(
+                    "The assistant found related policy material but could not answer "
+                    "from it, and this area carries regulatory or disciplinary "
+                    "consequence."
+                ),
+                observed_score=round(top_score, 4),
+            ),
+            citations=[],
+            follow_up_questions=[],
+            generation_mode=self._generator.mode,
+            model=self._generator.model_name,
+            latency_ms=latency_ms,
+            created_at=datetime.now(timezone.utc),
+        )
+        self._log(request, response)
+        logger.info(
+            "question_escalated query_id=%s tier=%s area=%s owner=%r score=%.3f",
+            query_id,
+            tier.value,
+            area.value,
+            owner,
+            top_score,
+        )
+        return response
 
     def _bind_citations(
         self, used_excerpts: list[int], retrieved: list[RetrievedChunk]
@@ -247,6 +365,7 @@ class RagService:
                 "asked_by": request.asked_by,
                 "citation_count": len(response.citations),
                 "latency_ms": response.latency_ms,
+                "risk_tier": response.risk_tier.value,
                 "generation_mode": response.generation_mode,
                 "feedback": None,
                 "feedback_comment": None,

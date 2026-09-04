@@ -9,6 +9,7 @@ from app.schemas.analytics import (
 )
 from app.schemas.chat import (
     AskRequest,
+    Escalation,
     AskResponse,
     Citation,
     FeedbackRequest,
@@ -23,6 +24,7 @@ from app.schemas.common import (
     Jurisdiction,
     Page,
     PolicyCategory,
+    RiskTier,
 )
 from app.schemas.documents import (
     DocumentChunkPreview,
@@ -50,6 +52,7 @@ __all__ = [
     "DocumentSection",
     "DocumentStatus",
     "DocumentStatusUpdate",
+    "Escalation",
     "FeedbackRating",
     "FeedbackRequest",
     "HealthResponse",
@@ -59,5 +62,6 @@ __all__ = [
     "Page",
     "PolicyCategory",
     "QueryLogEntry",
+    "RiskTier",
     "TopQuestion",
 ]

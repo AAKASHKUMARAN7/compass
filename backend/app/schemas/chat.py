@@ -12,7 +12,17 @@ from app.schemas.common import (
     FeedbackRating,
     Jurisdiction,
     PolicyCategory,
+    RiskTier,
 )
+
+
+class Escalation(BaseModel):
+    """Where a question goes when the assistant should not answer it alone."""
+
+    team: str = Field(..., description="Owning team of the closest matching policy.")
+    policy_area: PolicyCategory
+    reason: str
+    observed_score: float
 
 
 class AskRequest(BaseModel):
@@ -57,6 +67,8 @@ class AskResponse(BaseModel):
     answer: str
     confidence: Confidence
     top_score: float
+    risk_tier: RiskTier = RiskTier.STANDARD
+    escalation: Escalation | None = None
     citations: list[Citation]
     follow_up_questions: list[str] = []
     generation_mode: str

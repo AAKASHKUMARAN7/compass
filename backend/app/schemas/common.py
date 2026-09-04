@@ -55,6 +55,20 @@ class Confidence(str, Enum):
 class AnswerStatus(str, Enum):
     ANSWERED = "answered"
     NO_COVERAGE = "no_coverage"
+    ESCALATED = "escalated"
+
+
+class RiskTier(str, Enum):
+    """How much a wrong answer costs in this policy area.
+
+    Retrieval evidence that is good enough to answer a leave question is not
+    good enough to answer one about accepting a gift from an audit client. The
+    tier raises the bar rather than changing the pipeline.
+    """
+
+    STANDARD = "standard"
+    ELEVATED = "elevated"
+    CRITICAL = "critical"
 
 
 class FeedbackRating(str, Enum):
